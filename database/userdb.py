@@ -11,14 +11,10 @@ GET_USER_SQL = """SELECT about, email, fullname, nickname
 
 def update_user_sql(user):
 	sql = 'UPDATE users SET'
-	if 'about' in user:
-		sql += ' about = %(about)s,'
-	if 'email' in user:
-		sql += ' email = %(email)s,'
-	if 'fullname' in user:
-		sql += ' fullname = %(fullname)s,'
-	sql = sql[:-1]
-	sql += ' WHERE nickname = %(nickname)s RETURNING about, email, fullname, nickname'
+	sql += ' about = %(about)s,' if 'about' in user else ' about = about,'
+	sql += ' email = %(email)s,' if 'email' in user else ' email = email,'
+	sql += ' fullname = %(fullname)s' if 'fullname' in user else ' fullname = fullname'
+	sql += ' WHERE nickname = %(nickname)s RETURNING *'
 	return sql
 
 
@@ -78,9 +74,16 @@ class UserDbManager:
 			connection = psycopg2.connect(connection_string)
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 			cursor.execute(update_user_sql(user), user)
-			connection.commit()
+			user = cursor.fetchone()
 			if user is None:
-				code = status_codes['CONFLICT']
+				code = status_codes['NOT_FOUND']
+			connection.commit()
+		except psycopg2.IntegrityError as e:
+			print('Error %s' % e)
+			if connection:
+				connection.rollback()
+			code = status_codes['CONFLICT']
+			user = None
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
 			if connection:
@@ -91,3 +94,11 @@ class UserDbManager:
 			if connection:
 				connection.close()
 		return user, code
+
+	@staticmethod
+	def count():
+		pass
+
+	@staticmethod
+	def clear():
+		pass
