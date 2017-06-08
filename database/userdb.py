@@ -9,7 +9,7 @@ GET_USER_SQL = """SELECT about, email, fullname, nickname
 					FROM users WHERE nickname = %(nickname)s OR email = %(email)s"""
 
 
-class UserDatabaseManager:
+class UserDbManager:
 	@staticmethod
 	def create(user):
 		connection = None

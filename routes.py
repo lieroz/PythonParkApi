@@ -1,8 +1,8 @@
 from flask import jsonify, request
 from appconfig import app
-from database import *
+from database.userdb import UserDbManager
 
-user_db = UserDatabaseManager()
+user_db = UserDbManager()
 
 
 @app.route('/api/user/<nickname>/create', methods=['POST'])
