@@ -3,7 +3,8 @@ import psycopg2
 import psycopg2.extras
 
 CREATE_FORUM_SQL = """INSERT INTO forums ("user", slug, title)
-						VALUES (%(user)s, %(slug)s, %(title)s) RETURNING *"""
+						VALUES ((SELECT nickname FROM users WHERE nickname = %(user)s), 
+						%(slug)s, %(title)s) RETURNING *"""
 
 GET_FORUM_SQL = """SELECT * FROM forums WHERE slug = %(slug)s"""
 
@@ -27,6 +28,8 @@ class ForumDbManager:
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 			cursor.execute(GET_FORUM_SQL, {'slug': forum['slug']})
 			forum = cursor.fetchone()
+			if forum is None:
+				code = status_codes['NOT_FOUND']
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
 			if connection:
@@ -40,7 +43,24 @@ class ForumDbManager:
 
 	@staticmethod
 	def get(slug):
-		pass
+		connection = None
+		forum = None
+		code = status_codes['OK']
+		try:
+			connection = psycopg2.connect(connection_string)
+			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+			cursor.execute(GET_FORUM_SQL, {'slug': slug})
+			forum = cursor.fetchone()
+			if forum is None:
+				code = status_codes['NOT_FOUND']
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+			if connection:
+				connection.rollback()
+		finally:
+			if connection:
+				connection.close()
+		return forum, code
 
 	@staticmethod
 	def get_threads(slug, limit, since, desc):

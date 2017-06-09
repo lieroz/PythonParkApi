@@ -31,3 +31,9 @@ def create_forum():
 	content = request.json
 	forum, code = forum_db.create(content)
 	return jsonify(forum), code
+
+
+@app.route('/api/forum/<slug>/details', methods=['GET'])
+def view_forum_info(slug):
+	forum, code = forum_db.get(slug)
+	return jsonify(forum), code

@@ -61,6 +61,8 @@ class UserDbManager:
 				code = status_codes['NOT_FOUND']
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
+			if connection:
+				connection.rollback()
 		finally:
 			if connection:
 				connection.close()
