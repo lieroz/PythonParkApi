@@ -8,6 +8,8 @@ CREATE_FORUM_SQL = """INSERT INTO forums ("user", slug, title)
 
 GET_FORUM_SQL = """SELECT * FROM forums WHERE slug = %(slug)s"""
 
+UPDATE_THREADS_COUNT_SQL = """UPDATE forums SET posts = posts + %(amount)s WHERE slug = %(slug)s"""
+
 
 def get_threads_sql(since, desc):
 	sql = "SELECT * FROM threads WHERE forum = %(forum)s"
@@ -52,6 +54,25 @@ class ForumDbManager:
 			if connection:
 				connection.close()
 		return content, code
+
+	@staticmethod
+	def update_thread_count(amount, slug):
+		connection = None
+		code = status_codes['OK']
+		try:
+			connection = psycopg2.connect(connection_string)
+			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+			cursor.execute(UPDATE_THREADS_COUNT_SQL, {'amount': amount, 'slug': slug})
+			connection.commit()
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+			if connection:
+				connection.rollback()
+			code = status_codes['NOT_FOUND']
+		finally:
+			if connection:
+				connection.close()
+		return code
 
 	@staticmethod
 	def get(slug):

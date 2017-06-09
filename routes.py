@@ -1,12 +1,15 @@
 from flask import jsonify, request
-from appconfig import app, status_codes
+from appconfig import app, status_codes, format_time
+from datetime import datetime
 from database.userdb import UserDbManager
 from database.forumdb import ForumDbManager
 from database.threaddb import ThreadDbManager
+from database.postsdb import PostsDbManager
 
 user_db = UserDbManager()
 forum_db = ForumDbManager()
 thread_db = ThreadDbManager()
+posts_db = PostsDbManager()
 
 
 @app.route('/api/user/<nickname>/create', methods=['POST'])
@@ -68,3 +71,38 @@ def get_forum_threads(slug):
 		return jsonify([]), code
 	threads, code = forum_db.get_threads(slug=slug, limit=limit, since=since, desc=desc)
 	return jsonify(threads), code
+
+
+@app.route('/api/thread/<slug_or_id>/create', methods=['POST'])
+def create_posts(slug_or_id):
+	posts = request.json
+	if not posts:
+		return status_codes['NOT_FOUND']
+	thread, code = thread_db.get(slug_or_id=slug_or_id)
+	if code == status_codes['NOT_FOUND']:
+		return code
+	forum, code = forum_db.get(slug=thread['forum'])
+	if code == status_codes['NOT_FOUND']:
+		return code
+	post_id = posts_db.get_id()
+	for post in posts:
+		post_id += 1
+		if 'parent' not in post:
+			post['parent'] = 0
+			post['path'] = None
+			post['root_id'] = post_id
+		else:
+			parent, code = posts_db.get(post['parent'])
+			if code == status_codes['NOT_FOUND'] or thread['id'] != parent['thread']:
+				return status_codes['CONFLICT']
+			post['path'] = posts_db.get_path(parent=post['parent'])
+			post['root_id'] = post['path'][0]
+		post['created'] = format_time(datetime.now())
+		post['forum'] = forum['slug']
+		post['id'] = post_id
+		post['thread'] = thread['id']
+	code = posts_db.create(posts=posts)
+	if code == status_codes['CREATED']:
+		return jsonify(posts), code
+	else:
+		return code

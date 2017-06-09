@@ -11,7 +11,12 @@ def create_thread_sql(content):
 							SELECT nickname 
 							FROM users 
 							WHERE nickname = %(author)s
-						),  %(forum)s, %(message)s, %(slug)s, %(title)s) RETURNING *"""
+						),  
+						(
+							SELECT slug
+							FROM forums
+							WHERE slug = %(forum)s
+						), %(message)s, %(slug)s, %(title)s) RETURNING *"""
 	else:
 		sql = """INSERT INTO threads (author, created, forum, message, slug, title) 
 					VALUES (
@@ -19,10 +24,21 @@ def create_thread_sql(content):
 							SELECT nickname 
 							FROM users 
 							WHERE nickname = %(author)s
-						), %(created)s, %(forum)s, %(message)s, %(slug)s, %(title)s) RETURNING *"""
+						), %(created)s,
+						(
+							SELECT slug
+							FROM forums
+							WHERE slug = %(forum)s
+						), %(message)s, %(slug)s, %(title)s) RETURNING *"""
 	return sql
 
-GET_THREAD_SQL = """SELECT * FROM threads WHERE slug = %(slug)s"""
+
+def get_thread_sql(slug_or_id):
+	if slug_or_id.isdigit():
+		sql = "SELECT * FROM threads WHERE id = %(slug_or_id)s"
+	else:
+		sql = "SELECT * FROM threads WHERE slug = %(slug_or_id)s"
+	return sql
 
 
 class ThreadDbManager:
@@ -42,7 +58,7 @@ class ThreadDbManager:
 				connection.rollback()
 			code = status_codes['CONFLICT']
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-			cursor.execute(GET_THREAD_SQL, {'slug': content['slug']})
+			cursor.execute(get_thread_sql(slug_or_id=content['slug']), {'slug_or_id': content['slug']})
 			content = cursor.fetchone()
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
@@ -53,16 +69,36 @@ class ThreadDbManager:
 		finally:
 			if connection:
 				connection.close()
-		content['created'] = format_time(content['created'])
+		if content is None:
+			code = status_codes['NOT_FOUND']
+		else:
+			content['created'] = format_time(content['created'])
 		return content, code
 
 	@staticmethod
-	def update(content):
+	def update(forum_id):
 		pass
 
 	@staticmethod
 	def get(slug_or_id):
-		pass
+		connection = None
+		content = None
+		code = status_codes['OK']
+		try:
+			connection = psycopg2.connect(connection_string)
+			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+			cursor.execute(get_thread_sql(slug_or_id=slug_or_id), {'slug_or_id': slug_or_id})
+			content = cursor.fetchone()
+			if content is None:
+				code = status_codes['NOT_FOUND']
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+			if connection:
+				connection.rollback()
+		finally:
+			if connection:
+				connection.close()
+		return content, code
 
 	@staticmethod
 	def update_votes(content, slug_or_id):

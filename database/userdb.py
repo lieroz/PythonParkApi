@@ -75,7 +75,7 @@ class UserDbManager:
 		try:
 			connection = psycopg2.connect(connection_string)
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-			cursor.execute(update_user_sql(content), content)
+			cursor.execute(update_user_sql(content=content), content)
 			content = cursor.fetchone()
 			if content is None:
 				code = status_codes['NOT_FOUND']
