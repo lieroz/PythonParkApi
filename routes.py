@@ -1,5 +1,5 @@
 from flask import jsonify, request
-from appconfig import app, format_time
+from appconfig import app, status_codes
 from database.userdb import UserDbManager
 from database.forumdb import ForumDbManager
 from database.threaddb import ThreadDbManager
@@ -49,3 +49,22 @@ def create_thread(slug):
 		content['slug'] = None
 	thread, code = thread_db.create(content=content)
 	return jsonify(thread), code
+
+
+@app.route('/api/forum/<slug>/threads', methods=['GET'])
+def get_forum_threads(slug):
+	query_params = request.args.to_dict()
+	limit, since, desc = 100, None, False
+	for key in query_params.keys():
+		if key == 'limit':
+			limit = query_params['limit']
+		elif key == 'since':
+			since = query_params['since']
+		elif key == 'desc':
+			if query_params[key] == 'true':
+				desc = True
+	forum, code = forum_db.get(slug=slug)
+	if code == status_codes['NOT_FOUND']:
+		return jsonify([]), code
+	threads, code = forum_db.get_threads(slug=slug, limit=limit, since=since, desc=desc)
+	return jsonify(threads), code

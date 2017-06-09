@@ -1,4 +1,4 @@
-from appconfig import connection_string, status_codes
+from appconfig import connection_string, status_codes, format_time
 import psycopg2
 import psycopg2.extras
 
@@ -7,6 +7,18 @@ CREATE_FORUM_SQL = """INSERT INTO forums ("user", slug, title)
 						%(slug)s, %(title)s) RETURNING *"""
 
 GET_FORUM_SQL = """SELECT * FROM forums WHERE slug = %(slug)s"""
+
+
+def get_threads_sql(since, desc):
+	sql = "SELECT * FROM threads WHERE forum = %(forum)s"
+	if since is not None:
+		sql += " AND created "
+		sql += "<= %(since)s" if desc else ">= %(since)s"
+	sql += " ORDER BY created"
+	if desc:
+		sql += " DESC"
+	sql += " LIMIT %(limit)s"
+	return sql
 
 
 class ForumDbManager:
@@ -64,7 +76,25 @@ class ForumDbManager:
 
 	@staticmethod
 	def get_threads(slug, limit, since, desc):
-		pass
+		connection = None
+		content = None
+		code = status_codes['OK']
+		try:
+			connection = psycopg2.connect(connection_string)
+			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+			cursor.execute(get_threads_sql(since=since, desc=desc), {'forum': slug, 'since': since, 'limit': limit})
+			content = cursor.fetchall()
+			for param in content:
+				param['created'] = format_time(param['created'])
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+			if connection:
+				connection.rollback()
+			code = status_codes['NOT_FOUND']
+		finally:
+			if connection:
+				connection.close()
+		return content, code
 
 	@staticmethod
 	def get_users(slug, limit, since, desc):

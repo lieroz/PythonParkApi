@@ -9,11 +9,11 @@ GET_USER_SQL = """SELECT about, email, fullname, nickname
 					FROM users WHERE nickname = %(nickname)s OR email = %(email)s"""
 
 
-def update_user_sql(user):
+def update_user_sql(content):
 	sql = 'UPDATE users SET'
-	sql += ' about = %(about)s,' if 'about' in user else ' about = about,'
-	sql += ' email = %(email)s,' if 'email' in user else ' email = email,'
-	sql += ' fullname = %(fullname)s' if 'fullname' in user else ' fullname = fullname'
+	sql += ' about = %(about)s,' if 'about' in content else ' about = about,'
+	sql += ' email = %(email)s,' if 'email' in content else ' email = email,'
+	sql += ' fullname = %(fullname)s' if 'fullname' in content else ' fullname = fullname'
 	sql += ' WHERE nickname = %(nickname)s RETURNING *'
 	return sql
 
