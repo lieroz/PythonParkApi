@@ -20,13 +20,13 @@ def update_user_sql(user):
 
 class UserDbManager:
 	@staticmethod
-	def create(user):
+	def create(content):
 		connection = None
 		code = status_codes['CREATED']
 		try:
 			connection = psycopg2.connect(connection_string)
 			cursor = connection.cursor()
-			cursor.execute(CREATE_USER_SQL, user)
+			cursor.execute(CREATE_USER_SQL, content)
 			connection.commit()
 		except psycopg2.IntegrityError as e:
 			print('Error %s' % e)
@@ -34,30 +34,30 @@ class UserDbManager:
 				connection.rollback()
 			code = status_codes['CONFLICT']
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-			cursor.execute(GET_USER_SQL, {'nickname': user['nickname'], 'email': user['email']})
-			user = cursor.fetchall()
+			cursor.execute(GET_USER_SQL, {'nickname': content['nickname'], 'email': content['email']})
+			content = cursor.fetchall()
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
 			if connection:
 				connection.rollback()
 			code = status_codes['NOT_FOUND']
-			user = None
+			content = None
 		finally:
 			if connection:
 				connection.close()
-		return user, code
+		return content, code
 
 	@staticmethod
 	def get(nickname):
 		connection = None
-		user = None
+		content = None
 		code = status_codes['OK']
 		try:
 			connection = psycopg2.connect(connection_string)
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 			cursor.execute(GET_USER_SQL, {'nickname': nickname, 'email': None})
-			user = cursor.fetchone()
-			if user is None:
+			content = cursor.fetchone()
+			if content is None:
 				code = status_codes['NOT_FOUND']
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
@@ -66,18 +66,18 @@ class UserDbManager:
 		finally:
 			if connection:
 				connection.close()
-		return user, code
+		return content, code
 
 	@staticmethod
-	def update(user):
+	def update(content):
 		connection = None
 		code = status_codes['OK']
 		try:
 			connection = psycopg2.connect(connection_string)
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-			cursor.execute(update_user_sql(user), user)
-			user = cursor.fetchone()
-			if user is None:
+			cursor.execute(update_user_sql(content), content)
+			content = cursor.fetchone()
+			if content is None:
 				code = status_codes['NOT_FOUND']
 			connection.commit()
 		except psycopg2.IntegrityError as e:
@@ -85,17 +85,17 @@ class UserDbManager:
 			if connection:
 				connection.rollback()
 			code = status_codes['CONFLICT']
-			user = None
+			content = None
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
 			if connection:
 				connection.rollback()
 			code = status_codes['NOT_FOUND']
-			user = None
+			content = None
 		finally:
 			if connection:
 				connection.close()
-		return user, code
+		return content, code
 
 	@staticmethod
 	def count():

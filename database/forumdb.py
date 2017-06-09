@@ -11,14 +11,14 @@ GET_FORUM_SQL = """SELECT * FROM forums WHERE slug = %(slug)s"""
 
 class ForumDbManager:
 	@staticmethod
-	def create(forum):
+	def create(content):
 		connection = None
 		code = status_codes['CREATED']
 		try:
 			connection = psycopg2.connect(connection_string)
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-			cursor.execute(CREATE_FORUM_SQL, forum)
-			forum = cursor.fetchone()
+			cursor.execute(CREATE_FORUM_SQL, content)
+			content = cursor.fetchone()
 			connection.commit()
 		except psycopg2.IntegrityError as e:
 			print('Error %s' % e)
@@ -26,32 +26,32 @@ class ForumDbManager:
 				connection.rollback()
 			code = status_codes['CONFLICT']
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-			cursor.execute(GET_FORUM_SQL, {'slug': forum['slug']})
-			forum = cursor.fetchone()
-			if forum is None:
+			cursor.execute(GET_FORUM_SQL, {'slug': content['slug']})
+			content = cursor.fetchone()
+			if content is None:
 				code = status_codes['NOT_FOUND']
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
 			if connection:
 				connection.rollback()
 			code = status_codes['NOT_FOUND']
-			forum = None
+			content = None
 		finally:
 			if connection:
 				connection.close()
-		return forum, code
+		return content, code
 
 	@staticmethod
 	def get(slug):
 		connection = None
-		forum = None
+		content = None
 		code = status_codes['OK']
 		try:
 			connection = psycopg2.connect(connection_string)
 			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 			cursor.execute(GET_FORUM_SQL, {'slug': slug})
-			forum = cursor.fetchone()
-			if forum is None:
+			content = cursor.fetchone()
+			if content is None:
 				code = status_codes['NOT_FOUND']
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
@@ -60,7 +60,7 @@ class ForumDbManager:
 		finally:
 			if connection:
 				connection.close()
-		return forum, code
+		return content, code
 
 	@staticmethod
 	def get_threads(slug, limit, since, desc):

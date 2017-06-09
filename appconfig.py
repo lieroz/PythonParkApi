@@ -1,3 +1,4 @@
+import pytz
 from flask import Flask, g
 from werkzeug.contrib.fixers import ProxyFix
 import psycopg2
@@ -12,6 +13,13 @@ status_codes = {
 	'NOT_FOUND': 404,
 	'CONFLICT': 409
 }
+
+
+def format_time(created):
+	utc_time = created.astimezone(pytz.utc)
+	utc_str = utc_time.strftime("%Y-%m-%dT%H:%M:%S.%f")
+	utc_str = utc_str[:-3] + 'Z'
+	return utc_str
 
 
 @app.teardown_appcontext
