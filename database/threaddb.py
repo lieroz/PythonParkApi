@@ -2,6 +2,8 @@ from appconfig import connection_string, status_codes, format_time
 import psycopg2
 import psycopg2.extras
 
+UPDATE_VOTES_SQL = """SELECT update_or_insert_votes(%(nickname)s, %(thread)s, %(voice)s)"""
+
 
 def create_thread_sql(content):
 	if 'created' not in content:
@@ -41,6 +43,14 @@ def get_thread_sql(slug_or_id):
 	return sql
 
 
+def update_thread_sql(content):
+	sql = "UPDATE threads SET"
+	sql += " message = %(message)s," if 'message' in content else " message = message,"
+	sql += " title = %(title)s" if 'title' in content else " title = title"
+	sql += " WHERE id = %(slug_or_id)s" if content['slug_or_id'].isdigit() else " WHERE slug = %(slug_or_id)s"
+	return sql
+
+
 class ThreadDbManager:
 	@staticmethod
 	def create(content):
@@ -76,8 +86,33 @@ class ThreadDbManager:
 		return content, code
 
 	@staticmethod
-	def update(forum_id):
-		pass
+	def update(content):
+		connection = None
+		code = status_codes['OK']
+		try:
+			connection = psycopg2.connect(connection_string)
+			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+			cursor.execute(update_thread_sql(content=content), content)
+			content = cursor.fetchone()
+			if content is None:
+				code = status_codes['NOT_FOUND']
+			connection.commit()
+		except psycopg2.IntegrityError as e:
+			print('Error %s' % e)
+			if connection:
+				connection.rollback()
+			code = status_codes['CONFLICT']
+			content = None
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+			if connection:
+				connection.rollback()
+			code = status_codes['NOT_FOUND']
+			content = None
+		finally:
+			if connection:
+				connection.close()
+		return content, code
 
 	@staticmethod
 	def get(slug_or_id):
@@ -98,11 +133,27 @@ class ThreadDbManager:
 		finally:
 			if connection:
 				connection.close()
+		if content is None:
+			code = status_codes['NOT_FOUND']
+		else:
+			content['created'] = format_time(content['created'])
 		return content, code
 
 	@staticmethod
-	def update_votes(content, slug_or_id):
-		pass
+	def update_votes(content):
+		connection = None
+		try:
+			connection = psycopg2.connect(connection_string)
+			cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+			cursor.execute(UPDATE_VOTES_SQL, content)
+			connection.commit()
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+			if connection:
+				connection.rollback()
+		finally:
+			if connection:
+				connection.close()
 
 	@staticmethod
 	def count():

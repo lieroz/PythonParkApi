@@ -145,9 +145,9 @@ FOR EACH ROW EXECUTE PROCEDURE on_insert_post_or_thread();
 
 --
 
-DROP FUNCTION update_or_insert_votes( INTEGER, INTEGER, INTEGER );
+DROP FUNCTION IF EXISTS update_or_insert_votes( CITEXT, INTEGER, INTEGER );
 
-CREATE OR REPLACE FUNCTION update_or_insert_votes(vote_user_nickname INTEGER, vote_thread INTEGER,
+CREATE OR REPLACE FUNCTION update_or_insert_votes(vote_user_nickname CITEXT, vote_thread INTEGER,
                                                   vote_value         INTEGER)
   RETURNS VOID AS $$
 BEGIN

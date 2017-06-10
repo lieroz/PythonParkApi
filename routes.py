@@ -73,6 +73,7 @@ def get_forum_threads(slug):
 	return jsonify(threads), code
 
 
+# TODO add update count in forum
 @app.route('/api/thread/<slug_or_id>/create', methods=['POST'])
 def create_posts(slug_or_id):
 	posts = request.json
@@ -85,6 +86,7 @@ def create_posts(slug_or_id):
 	if code == status_codes['NOT_FOUND']:
 		return code
 	post_id = posts_db.get_id()
+	created = format_time(datetime.now())
 	for post in posts:
 		post_id += 1
 		if 'parent' not in post:
@@ -97,12 +99,54 @@ def create_posts(slug_or_id):
 				return status_codes['CONFLICT']
 			post['path'] = posts_db.get_path(parent=post['parent'])
 			post['root_id'] = post['path'][0]
-		post['created'] = format_time(datetime.now())
+		post['created'] = created
 		post['forum'] = forum['slug']
 		post['id'] = post_id
 		post['thread'] = thread['id']
 	code = posts_db.create(posts=posts)
 	if code == status_codes['CREATED']:
 		return jsonify(posts), code
-	else:
+	return code
+
+
+@app.route('/api/thread/<slug_or_id>/vote', methods=['POST'])
+def vote(slug_or_id):
+	thread, code = thread_db.get(slug_or_id=slug_or_id)
+	if code == status_codes['NOT_FOUND']:
 		return code
+	content = request.json
+	content['thread'] = thread['id']
+	thread_db.update_votes(content=content)
+	thread, code = thread_db.get(slug_or_id=slug_or_id)
+	return jsonify(thread), code
+
+
+@app.route('/api/thread/<slug_or_id>/details', methods=['GET', 'POST'])
+def view_thread(slug_or_id):
+	if request.method == 'GET':
+		thread, code = thread_db.get(slug_or_id=slug_or_id)
+	else:
+		content = request.json
+		content['slug_or_id'] = slug_or_id
+		thread, code = thread_db.update(content=content)
+	return jsonify(thread), code
+
+
+@app.route('/api/thread/<slug_or_id>/posts', methods=['GET'])
+def get_posts_sorted(slug_or_id):
+	query_params = request.args.to_dict()
+	limit, marker, sort, desc = 100, '0', 'flat', False
+	for key in query_params.keys():
+		if key == 'limit':
+			limit = query_params['limit']
+		elif key == 'marker':
+			marker = query_params['marker']
+		elif key == 'sort':
+			sort = query_params['sort']
+		elif key == 'desc':
+			if query_params[key] == 'true':
+				desc = True
+	posts, code = posts_db.sort(limit=limit, offset=marker, sort=sort, desc=desc, slug_or_id=slug_or_id)
+	if not posts:
+		return jsonify({'marker': marker, 'posts': posts})
+	return jsonify({'marker': str(int(marker) + int(limit)), 'posts': posts})
