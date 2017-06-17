@@ -72,8 +72,19 @@ class UserDbManager:
 
 	@staticmethod
 	def count():
-		pass
+		content = None
+		try:
+			with get_db_cursor() as cursor:
+				cursor.execute("SELECT COUNT(*) FROM users")
+				content = cursor.fetchone()
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+		return content['count']
 
 	@staticmethod
 	def clear():
-		pass
+		try:
+			with get_db_cursor(commit=True) as cursor:
+				cursor.execute("DELETE FROM users")
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)

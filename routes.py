@@ -98,7 +98,8 @@ def create_posts(slug_or_id):
 			path = posts_db.get_path(parent=post['parent'])
 			path.append(post_id)
 			data.append(
-				(post['author'], created, forum['slug'], post_id, post['message'], post['parent'], thread['id'], path, path[0]))
+				(post['author'], created, forum['slug'], post_id, post['message'], post['parent'], thread['id'], path,
+				 path[0]))
 		post['created'] = created
 		post['forum'] = forum['slug']
 		post['id'] = post_id
@@ -113,10 +114,13 @@ def create_posts(slug_or_id):
 
 @app.route('/api/thread/<slug_or_id>/vote', methods=['POST'])
 def vote(slug_or_id):
+	content = request.json
 	thread, code = thread_db.get(slug_or_id=slug_or_id)
 	if code == status_codes['NOT_FOUND']:
-		return code
-	content = request.json
+		return jsonify(None), code
+	user, code = user_db.get(nickname=content['nickname'])
+	if code == status_codes['NOT_FOUND']:
+		return jsonify(None), code
 	content['thread'] = thread['id']
 	thread_db.update_votes(content=content)
 	thread, code = thread_db.get(slug_or_id=slug_or_id)
@@ -149,9 +153,11 @@ def get_posts_sorted(slug_or_id):
 			if query_params[key] == 'true':
 				desc = True
 	posts, code = posts_db.sort(limit=limit, offset=marker, sort=sort, desc=desc, slug_or_id=slug_or_id)
+	if not posts and marker == '0':
+		return jsonify(None), status_codes['NOT_FOUND']
 	if not posts:
-		return jsonify({'marker': marker, 'posts': posts})
-	return jsonify({'marker': str(int(marker) + int(limit)), 'posts': posts})
+		return jsonify({'marker': marker, 'posts': posts}), code
+	return jsonify({'marker': str(int(marker) + int(limit)), 'posts': posts}), code
 
 
 @app.route('/api/forum/<slug>/users', methods=['GET'])
@@ -175,12 +181,35 @@ def get_forum_users(slug):
 
 @app.route('/api/post/<identifier>/details', methods=['GET', 'POST'])
 def get_post_detailed(identifier):
-	query_params = request.args.to_dict()
-	print(query_params)
 	if request.method == 'GET':
 		post, code = posts_db.get(identifier=identifier)
 		return jsonify({'user': None, 'forum': None, 'post': post, 'thread': None}), code
 	elif request.method == 'POST':
 		content = request.json
-		post, code = posts_db.update(identifier=identifier, content=content)
+		print(content)
+		post, code = posts_db.get(identifier=identifier)
+		if post is not None:
+			if 'message' in content and post['message'] != content['message']:
+				post, code = posts_db.update(identifier=identifier, content=content)
 		return jsonify(post), code
+
+
+@app.route('/api/service/status', methods=['GET'])
+def status():
+	return jsonify(
+		{
+			'forum': forum_db.count(),
+			'post': posts_db.count(),
+			'thread': thread_db.count(),
+			'user': user_db.count()
+		}
+	), status_codes['OK']
+
+
+@app.route('/api/service/clear', methods=['POST'])
+def clear():
+	user_db.clear()
+	thread_db.clear()
+	forum_db.clear()
+	posts_db.clear()
+	return jsonify(None), status_codes['OK']

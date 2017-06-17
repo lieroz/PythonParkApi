@@ -112,8 +112,19 @@ class ForumDbManager:
 
 	@staticmethod
 	def count():
-		pass
+		content = None
+		try:
+			with get_db_cursor() as cursor:
+				cursor.execute("SELECT COUNT(*) FROM forums")
+				content = cursor.fetchone()
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+		return content['count']
 
 	@staticmethod
 	def clear():
-		pass
+		try:
+			with get_db_cursor(commit=True) as cursor:
+				cursor.execute("DELETE FROM forums")
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
