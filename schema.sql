@@ -126,6 +126,21 @@ CREATE INDEX IF NOT EXISTS nickname_forum_users_idx
 CREATE INDEX IF NOT EXISTS forum_forum_users_idx
   ON forum_users (forum);
 
+--
+
+CREATE OR REPLACE FUNCTION after_thread_insert()
+  RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE forums
+  SET threads = threads + 1
+  WHERE slug = NEW.forum;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_threads_count_trigger
+AFTER INSERT ON threads
+FOR EACH ROW EXECUTE PROCEDURE after_thread_insert();
 
 CREATE OR REPLACE FUNCTION on_insert_post_or_thread()
   RETURNS TRIGGER AS $$

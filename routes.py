@@ -73,7 +73,6 @@ def get_forum_threads(slug):
 	return jsonify(threads), code
 
 
-# TODO add update count in forum
 @app.route('/api/thread/<slug_or_id>/create', methods=['POST'])
 def create_posts(slug_or_id):
 	posts = request.json
@@ -87,23 +86,25 @@ def create_posts(slug_or_id):
 		return code
 	post_id = posts_db.get_id()
 	created = format_time(datetime.now())
+	data = []
 	for post in posts:
 		post_id += 1
 		if 'parent' not in post:
-			post['parent'] = 0
-			post['path'] = None
-			post['root_id'] = post_id
+			data.append(
+				(post['author'], created, forum['slug'], post['message'], 0, thread['id'], [post_id], post_id))
 		else:
 			parent, code = posts_db.get(post['parent'])
 			if code == status_codes['NOT_FOUND'] or thread['id'] != parent['thread']:
 				return status_codes['CONFLICT']
-			post['path'] = posts_db.get_path(parent=post['parent'])
-			post['root_id'] = post['path'][0]
+			path = posts_db.get_path(parent=post['parent'])
+			path.append(post_id)
+			data.append(
+				(post['author'], created, forum['slug'], post['message'], post['parent'], thread['id'], path, path[0]))
 		post['created'] = created
 		post['forum'] = forum['slug']
 		post['id'] = post_id
 		post['thread'] = thread['id']
-	code = posts_db.create(posts=posts)
+	code = posts_db.create(data=data, forum=thread['forum'])
 	if code == status_codes['CREATED']:
 		return jsonify(posts), code
 	return code

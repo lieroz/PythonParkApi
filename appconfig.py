@@ -1,6 +1,12 @@
+import os
+from contextlib import contextmanager
+from urllib.parse import urlparse
+
 from flask import Flask, g
+from psycopg2.pool import ThreadedConnectionPool
 from werkzeug.contrib.fixers import ProxyFix
 import psycopg2
+import psycopg2.extras
 import pytz
 
 app = Flask(__name__)
@@ -13,6 +19,33 @@ status_codes = {
 	'NOT_FOUND': 404,
 	'CONFLICT': 409
 }
+
+url = urlparse(os.environ.get('DATABASE_URL'))
+pool = ThreadedConnectionPool(
+	1, 8, database='testdb', user='lieroz', password='b769sz7u', host='localhost', port='5432'
+)
+
+
+@contextmanager
+def get_db_connection():
+	try:
+		connection = pool.getconn()
+		yield connection
+	finally:
+		pool.putconn(connection)
+
+
+@contextmanager
+def get_db_cursor(commit=False):
+	with get_db_connection() as connection:
+		cursor = connection.cursor(
+			cursor_factory=psycopg2.extras.RealDictCursor)
+		try:
+			yield cursor
+			if commit:
+				connection.commit()
+		finally:
+			cursor.close()
 
 
 def format_time(created):
