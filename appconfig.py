@@ -11,7 +11,7 @@ import pytz
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
-connection_string = 'dbname=%s user=%s host=%s password=%s' % ('testdb', 'lieroz', 'localhost', 'b769sz7u')
+connection_string = 'dbname=%s user=%s host=%s password=%s' % ('docker', 'docker', 'localhost', 'docker')
 
 status_codes = {
 	'OK': 200,
@@ -22,7 +22,7 @@ status_codes = {
 
 url = urlparse(os.environ.get('DATABASE_URL'))
 pool = ThreadedConnectionPool(
-	1, 8, database='testdb', user='lieroz', password='b769sz7u', host='localhost', port='5432'
+	1, 8, database='docker', user='docker', password='docker', host='localhost', port='5432'
 )
 
 

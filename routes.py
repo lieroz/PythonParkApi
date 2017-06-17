@@ -151,3 +151,22 @@ def get_posts_sorted(slug_or_id):
 	if not posts:
 		return jsonify({'marker': marker, 'posts': posts})
 	return jsonify({'marker': str(int(marker) + int(limit)), 'posts': posts})
+
+
+@app.route('/api/forum/<slug>/users', methods=['GET'])
+def get_forum_users(slug):
+	query_params = request.args.to_dict()
+	limit, since, desc = 100, None, False
+	for key in query_params.keys():
+		if key == 'limit':
+			limit = query_params['limit']
+		elif key == 'since':
+			since = query_params['since']
+		elif key == 'desc':
+			if query_params[key] == 'true':
+				desc = True
+	forum, code = forum_db.get(slug=slug)
+	if code == status_codes['NOT_FOUND']:
+		return jsonify([]), code
+	threads, code = forum_db.get_users(slug=slug, limit=limit, since=since, desc=desc)
+	return jsonify(threads), code

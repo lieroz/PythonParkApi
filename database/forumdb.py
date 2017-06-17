@@ -23,6 +23,18 @@ def get_threads_sql(since, desc):
 	return sql
 
 
+def get_users_sql(since, desc):
+	sql = "SELECT * FROM users WHERE id IN (SELECT user_id FROM forum_users WHERE forum = %(forum)s)"
+	if since is not None:
+		sql += " AND nickname "
+		sql += "< %(since)s" if desc else "> %(since)s"
+	sql += " ORDER BY nickname COLLATE ucs_basic"
+	if desc:
+		sql += " DESC"
+	sql += " LIMIT %(limit)s"
+	return sql
+
+
 class ForumDbManager:
 	@staticmethod
 	def create(content):
@@ -75,7 +87,7 @@ class ForumDbManager:
 		content = None
 		code = status_codes['OK']
 		try:
-			with get_db_cursor(commit=True) as cursor:
+			with get_db_cursor() as cursor:
 				cursor.execute(get_threads_sql(since=since, desc=desc), {'forum': slug, 'since': since, 'limit': limit})
 				content = cursor.fetchall()
 				for param in content:
@@ -87,7 +99,16 @@ class ForumDbManager:
 
 	@staticmethod
 	def get_users(slug, limit, since, desc):
-		pass
+		content = None
+		code = status_codes['OK']
+		try:
+			with get_db_cursor() as cursor:
+				cursor.execute(get_users_sql(since=since, desc=desc), {'forum': slug, 'since': since, 'limit': limit})
+				content = cursor.fetchall()
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+			code = status_codes['NOT_FOUND']
+		return content, code
 
 	@staticmethod
 	def count():

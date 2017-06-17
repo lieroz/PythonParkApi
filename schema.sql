@@ -7,6 +7,7 @@ CREATE EXTENSION IF NOT EXISTS CITEXT;
 DROP TABLE IF EXISTS users CASCADE;
 
 CREATE TABLE IF NOT EXISTS users (
+  id       SERIAL PRIMARY KEY,
   about    TEXT DEFAULT NULL,
   email    CITEXT UNIQUE,
   fullname TEXT DEFAULT NULL,
@@ -62,8 +63,8 @@ CREATE TABLE IF NOT EXISTS posts (
 DROP TABLE IF EXISTS forum_users CASCADE;
 
 CREATE TABLE IF NOT EXISTS forum_users (
-  nickname CITEXT REFERENCES users (nickname) ON DELETE CASCADE,
-  forum    CITEXT REFERENCES forums (slug) ON DELETE CASCADE
+  user_id INTEGER REFERENCES users (id) ON DELETE CASCADE,
+  forum   CITEXT REFERENCES forums (slug) ON DELETE CASCADE
 );
 
 --
@@ -118,11 +119,11 @@ CREATE INDEX IF NOT EXISTS parent_tree_sort_posts_sub_idx
 
 --
 
-DROP INDEX IF EXISTS nickname_forum_users_idx;
+DROP INDEX IF EXISTS user_id_forum_users_idx;
 DROP INDEX IF EXISTS forum_forum_users_idx;
 
-CREATE INDEX IF NOT EXISTS nickname_forum_users_idx
-  ON forum_users (nickname);
+CREATE INDEX IF NOT EXISTS user_id_forum_users_idx
+  ON forum_users (user_id);
 CREATE INDEX IF NOT EXISTS forum_forum_users_idx
   ON forum_users (forum);
 
@@ -145,7 +146,9 @@ FOR EACH ROW EXECUTE PROCEDURE after_thread_insert();
 CREATE OR REPLACE FUNCTION on_insert_post_or_thread()
   RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO forum_users (nickname, forum) VALUES (NEW.author, NEW.forum);
+  INSERT INTO forum_users (user_id, forum) VALUES ((SELECT id
+                                                     FROM users
+                                                     WHERE nickname = NEW.author), NEW.forum);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
