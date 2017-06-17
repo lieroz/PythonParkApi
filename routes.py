@@ -167,6 +167,19 @@ def get_forum_users(slug):
 				desc = True
 	forum, code = forum_db.get(slug=slug)
 	if code == status_codes['NOT_FOUND']:
-		return jsonify([]), code
+		return jsonify(None), code
 	threads, code = forum_db.get_users(slug=slug, limit=limit, since=since, desc=desc)
 	return jsonify(threads), code
+
+
+@app.route('/api/post/<identifier>/details', methods=['GET', 'POST'])
+def get_post_detailed(identifier):
+	query_params = request.args.to_dict()
+	print(query_params)
+	if request.method == 'GET':
+		post, code = posts_db.get(identifier=identifier)
+		return jsonify({'user': None, 'forum': None, 'post': post, 'thread': None}), code
+	elif request.method == 'POST':
+		content = request.json
+		post, code = posts_db.update(identifier=identifier, content=content)
+		return jsonify(post), code

@@ -9,9 +9,12 @@ GET_PATH_SQL = """SELECT path FROM posts WHERE id = %(parent)s"""
 
 GET_NEXTVAL_SQL = """SELECT nextval('posts_id_seq')"""
 
-GET_POST_SQL = """SELECT * FROM posts WHERE id = %(id)s"""
+GET_POST_SQL = """SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts WHERE id = %(id)s"""
 
 UPDATE_POSTS_ON_FORUM_SQL = """UPDATE forums SET posts = posts + %(amount)s WHERE slug = %(forum)s"""
+
+UPDATE_POST_SQL = """UPDATE posts SET message = %(message)s, isEdited = TRUE WHERE id = %(id)s RETURNING 
+						author, created, forum, id, isEdited, message, parent, thread"""
 
 
 def posts_flat_sort_sql(slug_or_id, desc):
@@ -103,8 +106,25 @@ class PostsDbManager:
 		return code
 
 	@staticmethod
-	def update(content):
-		pass
+	def update(identifier, content):
+		code = status_codes['OK']
+		try:
+			with get_db_cursor(commit=True) as cursor:
+				cursor.execute(UPDATE_POST_SQL, {'message': content['message'], 'id': identifier})
+				content = cursor.fetchone()
+				if content is None:
+					code = status_codes['NOT_FOUND']
+				else:
+					content['created'] = format_time(content['created'])
+					content['isEdited'] = content['isedited']
+					del content['isedited']
+		except psycopg2.IntegrityError as e:
+			print('Error %s' % e)
+			code = status_codes['CONFLICT']
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
+			code = status_codes['NOT_FOUND']
+		return content, code
 
 	@staticmethod
 	def get(identifier):
@@ -116,13 +136,13 @@ class PostsDbManager:
 				content = cursor.fetchone()
 				if content is None:
 					code = status_codes['NOT_FOUND']
+				else:
+					content['created'] = format_time(content['created'])
+					content['isEdited'] = content['isedited']
+					del content['isedited']
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
 		return content, code
-
-	@staticmethod
-	def get_detailed(content, slug_or_id):
-		pass
 
 	@staticmethod
 	def sort(limit, offset, sort, desc, slug_or_id):
