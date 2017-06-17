@@ -3,11 +3,9 @@ import psycopg2
 import psycopg2.extras
 
 INSERT_POSTS_SQL = \
-	"""INSERT INTO posts (author, created, forum, message, parent, thread, path, root_id) VALUES %s"""
+	"""INSERT INTO posts (author, created, forum, id, message, parent, thread, path, root_id) VALUES %s"""
 
 GET_PATH_SQL = """SELECT path FROM posts WHERE id = %(parent)s"""
-
-GET_NEXTVAL_SQL = """SELECT nextval('posts_id_seq')"""
 
 GET_POST_SQL = """SELECT author, created, forum, id, isEdited, message, parent, thread FROM posts WHERE id = %(id)s"""
 
@@ -73,11 +71,19 @@ class PostsDbManager:
 		content = None
 		try:
 			with get_db_cursor() as cursor:
-				cursor.execute(GET_NEXTVAL_SQL)
+				cursor.execute("SELECT nextval('posts_id_seq')")
 				content = cursor.fetchone()
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
 		return content['nextval']
+
+	@staticmethod
+	def set_id(identifier):
+		try:
+			with get_db_cursor() as cursor:
+				cursor.execute("SELECT setval('posts_id_seq', %(id)s, false)", {'id': identifier})
+		except psycopg2.DatabaseError as e:
+			print('Error %s' % e)
 
 	@staticmethod
 	def get_path(parent):
@@ -99,7 +105,7 @@ class PostsDbManager:
 				cursor.execute(UPDATE_POSTS_ON_FORUM_SQL, {'amount': len(data), 'forum': forum})
 		except psycopg2.IntegrityError as e:
 			print('Error %s' % e)
-			code = status_codes['CONFLICT']
+			code = status_codes['NOT_FOUND']
 		except psycopg2.DatabaseError as e:
 			print('Error %s' % e)
 			code = status_codes['NOT_FOUND']
