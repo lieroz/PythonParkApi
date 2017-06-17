@@ -182,11 +182,24 @@ def get_forum_users(slug):
 @app.route('/api/post/<identifier>/details', methods=['GET', 'POST'])
 def get_post_detailed(identifier):
 	if request.method == 'GET':
+		related = request.args.getlist('related')
 		post, code = posts_db.get(identifier=identifier)
-		return jsonify({'user': None, 'forum': None, 'post': post, 'thread': None}), code
+		if post is None:
+			return jsonify(None), status_codes['NOT_FOUND']
+		user = None
+		forum = None
+		thread = None
+		for i in related:
+			for j in i.split(','):
+				if j == 'user':
+					user, code = user_db.get(nickname=post['author'])
+				if j == 'forum':
+					forum, code = forum_db.get(slug=post['forum'])
+				if j == 'thread':
+					thread, code = thread_db.get(slug_or_id=str(post['thread']))
+		return jsonify({'author': user, 'forum': forum, 'post': post, 'thread': thread}), code
 	elif request.method == 'POST':
 		content = request.json
-		print(content)
 		post, code = posts_db.get(identifier=identifier)
 		if post is not None:
 			if 'message' in content and post['message'] != content['message']:
