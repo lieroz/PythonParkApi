@@ -1,6 +1,6 @@
 SET SYNCHRONOUS_COMMIT = 'off';
 
-CREATE EXTENSION IF NOT EXISTS CITEXT;
+CREATE EXTENSION IF NOT EXISTS citext;
 
 --
 
@@ -9,9 +9,9 @@ DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE IF NOT EXISTS users (
   id       SERIAL PRIMARY KEY,
   about    TEXT DEFAULT NULL,
-  email    CITEXT UNIQUE,
+  email    citext UNIQUE,
   fullname TEXT DEFAULT NULL,
-  nickname CITEXT COLLATE ucs_basic UNIQUE
+  nickname citext COLLATE ucs_basic UNIQUE
 );
 
 --
@@ -19,10 +19,10 @@ CREATE TABLE IF NOT EXISTS users (
 DROP TABLE IF EXISTS forums CASCADE;
 
 CREATE TABLE IF NOT EXISTS forums (
-  "user"  CITEXT REFERENCES users (nickname) ON DELETE CASCADE  NOT NULL,
+  "user"  citext REFERENCES users (nickname) ON DELETE CASCADE  NOT NULL,
   posts   INTEGER DEFAULT 0,
   threads INTEGER DEFAULT 0,
-  slug    CITEXT UNIQUE                                         NOT NULL,
+  slug    citext UNIQUE                                         NOT NULL,
   title   TEXT                                                  NOT NULL
 );
 
@@ -31,12 +31,12 @@ CREATE TABLE IF NOT EXISTS forums (
 DROP TABLE IF EXISTS threads CASCADE;
 
 CREATE TABLE IF NOT EXISTS threads (
-  author  CITEXT REFERENCES users (nickname) ON DELETE CASCADE  NOT NULL,
+  author  citext REFERENCES users (nickname) ON DELETE CASCADE  NOT NULL,
   created TIMESTAMPTZ DEFAULT NOW(),
-  forum   CITEXT REFERENCES forums (slug) ON DELETE CASCADE     NOT NULL,
+  forum   citext REFERENCES forums (slug) ON DELETE CASCADE     NOT NULL,
   id      SERIAL PRIMARY KEY,
   message TEXT        DEFAULT NULL,
-  slug    CITEXT UNIQUE,
+  slug    citext UNIQUE,
   title   TEXT                                                  NOT NULL,
   votes   INTEGER     DEFAULT 0
 );
@@ -46,9 +46,9 @@ CREATE TABLE IF NOT EXISTS threads (
 DROP TABLE IF EXISTS posts CASCADE;
 
 CREATE TABLE IF NOT EXISTS posts (
-  author   CITEXT REFERENCES users (nickname) ON DELETE CASCADE      NOT NULL,
+  author   citext REFERENCES users (nickname) ON DELETE CASCADE      NOT NULL,
   created  TIMESTAMPTZ DEFAULT NOW(),
-  forum    CITEXT REFERENCES forums (slug) ON DELETE CASCADE         NOT NULL,
+  forum    citext REFERENCES forums (slug) ON DELETE CASCADE         NOT NULL,
   id       SERIAL PRIMARY KEY,
   isEdited BOOLEAN     DEFAULT FALSE,
   message  TEXT        DEFAULT NULL,
@@ -64,7 +64,7 @@ DROP TABLE IF EXISTS forum_users CASCADE;
 
 CREATE TABLE IF NOT EXISTS forum_users (
   user_id INTEGER REFERENCES users (id) ON DELETE CASCADE,
-  forum   CITEXT REFERENCES forums (slug) ON DELETE CASCADE
+  forum   citext REFERENCES forums (slug) ON DELETE CASCADE
 );
 
 --
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS forum_users (
 DROP TABLE IF EXISTS votes CASCADE;
 
 CREATE TABLE IF NOT EXISTS votes (
-  nickname CITEXT REFERENCES users (nickname) ON DELETE CASCADE,
+  nickname citext REFERENCES users (nickname) ON DELETE CASCADE,
   thread   INTEGER REFERENCES threads (id) ON DELETE CASCADE,
   voice    INTEGER DEFAULT 0,
   CONSTRAINT unique_pair UNIQUE (nickname, thread)
@@ -163,9 +163,9 @@ FOR EACH ROW EXECUTE PROCEDURE on_insert_post_or_thread();
 
 --
 
-DROP FUNCTION IF EXISTS update_or_insert_votes( CITEXT, INTEGER, INTEGER );
+DROP FUNCTION IF EXISTS update_or_insert_votes( citext, INTEGER, INTEGER );
 
-CREATE OR REPLACE FUNCTION update_or_insert_votes(vote_user_nickname CITEXT, vote_thread INTEGER,
+CREATE OR REPLACE FUNCTION update_or_insert_votes(vote_user_nickname citext, vote_thread INTEGER,
                                                   vote_value         INTEGER)
   RETURNS VOID AS $$
 BEGIN

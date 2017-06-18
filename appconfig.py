@@ -4,13 +4,11 @@ from urllib.parse import urlparse
 
 from flask import Flask, g
 from psycopg2.pool import ThreadedConnectionPool
-from werkzeug.contrib.fixers import ProxyFix
 import psycopg2
 import psycopg2.extras
 import pytz
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app)
 connection_string = 'dbname=%s user=%s host=%s password=%s' % ('docker', 'docker', 'localhost', 'docker')
 
 status_codes = {
@@ -49,6 +47,9 @@ def get_db_cursor(commit=False):
 
 
 def format_time(created):
+	zone = pytz.timezone('Europe/Moscow')
+	if created.tzinfo is None:
+		created = zone.localize(created)
 	utc_time = created.astimezone(pytz.utc)
 	utc_str = utc_time.strftime("%Y-%m-%dT%H:%M:%S.%f")
 	utc_str = utc_str[:-3] + 'Z'
@@ -72,4 +73,4 @@ def init_db():
 		db.commit()
 
 
-init_db()
+# init_db()

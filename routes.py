@@ -86,8 +86,8 @@ def create_posts(slug_or_id):
 		return jsonify(None), code
 	created = format_time(datetime.now())
 	data = []
-	post_id = posts_db.get_id()
 	for post in posts:
+		post_id = posts_db.get_id()
 		if 'parent' not in post:
 			data.append(
 				(post['author'], created, forum['slug'], post_id, post['message'], 0, thread['id'], [post_id], post_id))
@@ -98,14 +98,11 @@ def create_posts(slug_or_id):
 			path = posts_db.get_path(parent=post['parent'])
 			path.append(post_id)
 			data.append(
-				(post['author'], created, forum['slug'], post_id, post['message'], post['parent'], thread['id'], path,
-				 path[0]))
+				(post['author'], created, forum['slug'], post_id, post['message'], post['parent'], thread['id'], path, path[0]))
 		post['created'] = created
 		post['forum'] = forum['slug']
 		post['id'] = post_id
 		post['thread'] = thread['id']
-		post_id += 1
-	posts_db.set_id(post_id)
 	code = posts_db.create(data=data, forum=thread['forum'])
 	if code == status_codes['CREATED']:
 		return jsonify(posts), code
