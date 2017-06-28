@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 from urllib.parse import urlparse
 
-from flask import Flask, g
+from flask import Flask
 from psycopg2.pool import ThreadedConnectionPool
 import psycopg2
 import psycopg2.extras
@@ -56,21 +56,12 @@ def format_time(created):
 	return utc_str
 
 
-@app.teardown_appcontext
-def close_connection(exception):
-	db = getattr(g, '_database', None)
-	if db is not None:
-		db.close()
-
-
 def init_db():
-	with app.app_context():
-		db = getattr(g, '_database', None)
-		if db is None:
-			db = g._database = psycopg2.connect(connection_string)
-		with app.open_resource('schema.sql', mode='r') as f:
-			db.cursor().execute(f.read())
-		db.commit()
+	with get_db_cursor(commit=True) as cursor:
+		cursor.execute(open('schema.sql', 'r').read())
+		cursor.execute("""PREPARE insert_posts_batch AS
+						INSERT INTO posts (author, created, forum, id, message, parent, thread, path, root_id) 
+						VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""")
 
 
-# init_db()
+init_db()

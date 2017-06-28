@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-MAINTAINER Sergey Krestov
+MAINTAINER Andrey Kamakin
 
 # Обвновление списка пакетов
 RUN apt-get -y update
