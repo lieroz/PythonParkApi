@@ -59,9 +59,6 @@ def format_time(created):
 def init_db():
 	with get_db_cursor(commit=True) as cursor:
 		cursor.execute(open('schema.sql', 'r').read())
-		cursor.execute("""PREPARE insert_posts_batch AS
-						INSERT INTO posts (author, created, forum, id, message, parent, thread, path, root_id) 
-						VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""")
 
 
-init_db()
+# init_db()
